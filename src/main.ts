@@ -1,4 +1,4 @@
-type Nutrient = "NO3" | "PO4" | "K" ;
+type Nutrient = "NO3" | "PO4" | "K" | "Fe" ;
 type Compound = "KNO3" | "KH2PO4" | "K2SO4";
 
 const FRACTION_BY_MASS: Record<Compound, Partial<Record<Nutrient, number>>> = {
