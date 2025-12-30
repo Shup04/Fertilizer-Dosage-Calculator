@@ -7,6 +7,12 @@ const FRACTION_BY_MASS: Record<Compound, Partial<Record<Nutrient, number>>> = {
   K2SO4: { K: 0.449 },
 }
 
+// Simple conversion helpers
+const gallonsToLiters = (gallons: number): number => gallons * 3.78541;
+const litersToGallons = (liters: number): number => liters / 3.78541;
+const ppmToMg = (ppm: number, liters: number): number => ppm * liters;
+const mgToPpm = (mg: number, liters: number): number => mg / liters;
+
 const getFraction = (c: Compound, n: Nutrient): number => {
   const f = FRACTION_BY_MASS[c][n];
   if (f === undefined) {
