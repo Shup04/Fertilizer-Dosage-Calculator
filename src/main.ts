@@ -7,6 +7,35 @@ const FRACTION_BY_MASS: Record<Compound, Partial<Record<Nutrient, number>>> = {
   K2SO4: { K: 0.449 },
 }
 
+type StockRecipe = {
+  compound: Compound;
+  grams: number;
+  finalVolumeMl: number;
+}
+
+type Stock = {
+  recipe: StockRecipe;
+  nutrientMgPerMl: Partial<Record<Nutrient, number>>;
+}
+
+const makeStock = (recipe: StockRecipe): Stock => {
+  if (recipe.grams <=0 ) throw new Error("Grams must be positive");
+  if (recipe.finalVolumeMl <=0 ) throw new Error("Final volume must be positive");
+  if (recipe.compound === undefined) throw new Error("Compound must be defined");
+  const mgCompoundPerMl = (recipe.grams * 1000) / recipe.finalVolumeMl; // convert grams to mg/ml
+
+  const fractions = FRACTION_BY_MASS[recipe.compound];
+  const nutrientMgPerMl: Partial<Record<Nutrient, number>> = {};
+
+  for (const n in fractions) {
+    const f = fractions[n as Nutrient];
+    if (f == null) continue;
+    nutrientMgPerMl[n as Nutrient] = mgCompoundPerMl * f;
+  }
+
+  return {recipe, nutrientMgPerMl};
+}
+
 // Simple conversion helpers
 const gallonsToLiters = (gallons: number): number => gallons * 3.78541;
 const litersToGallons = (liters: number): number => liters / 3.78541;
@@ -37,10 +66,10 @@ const compoundMgNeededForPpm = (tankLiters: number, targetPpmIncrease: number, c
 }
 
 // ml of solution needed to provide given mg of compound, given concentration in mg/ml
-const mgNutrientPerMl = (mgCompoundNeeded: number, MgPerMl: number): number => {
-  if (MgPerMl <=0 ) throw new Error("Concentration must be positive");
-  if (mgCompoundNeeded <=0 ) throw new Error("Mass must be positive");
-  return mgCompoundNeeded / MgPerMl;
+const doseMlFromMgAndConcentration = (mgNeeded: number, mgPerMl: number): number => {
+  if (mgPerMl <=0 ) throw new Error("Concentration must be positive");
+  if (mgNeeded <=0 ) throw new Error("Mass must be positive");
+  return mgNeeded / mgPerMl;
 }
 
 // to get concentration in mg/ml of a solution given grams of compound dissolved in volume in ml
@@ -62,7 +91,13 @@ const tankSizeLiters = gallonsToLiters(tankSizeGallons);
 
 // get the mg of compound needed to increase nutrient ppm by desired amount
 const mgCompoundNeeded = compoundMgNeededForPpm(tankSizeLiters, targetPpmIncrease, c, n);
-const mlDose = mgNutrientPerMl(mgCompoundNeeded, 80) // assuming you add 40g to 500ml
+const mlDose = doseMlFromMgAndConcentration(mgCompoundNeeded, 80) // assuming you add 40g to 500ml
+
+const mixture: StockRecipe = {compound: c, grams: 40, finalVolumeMl: 500};
+const testStock: Stock = makeStock(mixture); // Standard mix for KNO3
 
 console.log('To increase ' + n + ' by ' + targetPpmIncrease + ' ppm in a ' + tankSizeGallons + 'g tank, you need ' + mgCompoundNeeded.toFixed(2) + ' mg of ' + c + '.');
 console.log('To add ' + mgCompoundNeeded.toFixed(2) + ' mg of ' + c + ', you need to dose ' + mlDose.toFixed(2) + ' ml of solution.');
+console.log('---Stock solution Example ---');
+console.log(testStock);
+
