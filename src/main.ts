@@ -27,6 +27,7 @@ const nutrientMgNeeded = (tankLiters: number, targetPpmIncrease: number): number
   return tankLiters * targetPpmIncrease;
 }
 
+// mg of compound needed to increase nutrient by target ppm in tank of given size
 const compoundMgNeededForPpm = (tankLiters: number, targetPpmIncrease: number, c: Compound, n: Nutrient): number => {
   if (tankLiters <=0 ) throw new Error("Tank size must be positive");
   if (targetPpmIncrease <=0 ) throw new Error("Target ppm increase must be positive");
@@ -35,13 +36,22 @@ const compoundMgNeededForPpm = (tankLiters: number, targetPpmIncrease: number, c
   return mgNutrient / f; // mg compound needed
 }
 
+// ml of solution needed to provide given mg of compound, given concentration in mg/ml
 const mgNutrientPerMl = (mgCompoundNeeded: number, MgPerMl: number): number => {
   if (MgPerMl <=0 ) throw new Error("Concentration must be positive");
+  if (mgCompoundNeeded <=0 ) throw new Error("Mass must be positive");
   return mgCompoundNeeded / MgPerMl;
 }
 
-// Example
+// to get concentration in mg/ml of a solution given grams of compound dissolved in volume in ml
+const mgCompoundPerMl = (gramsInSolution: number, volumeMl: number): number => {
+  if (volumeMl <=0 ) throw new Error("Volume must be positive");
+  if (gramsInSolution <=0 ) throw new Error("Mass must be positive");
+  return (gramsInSolution * 1000) / volumeMl; // convert grams to mg
+}
 
+
+// Example
 const c: Compound = "KNO3";
 const n: Nutrient = "NO3";
 const tankSizeGallons = 26;
