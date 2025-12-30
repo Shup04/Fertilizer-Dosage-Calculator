@@ -35,12 +35,24 @@ const compoundMgNeededForPpm = (tankLiters: number, targetPpmIncrease: number, c
   return mgNutrient / f; // mg compound needed
 }
 
+const mgNutrientPerMl = (mgCompoundNeeded: number, MgPerMl: number): number => {
+  if (MgPerMl <=0 ) throw new Error("Concentration must be positive");
+  return mgCompoundNeeded / MgPerMl;
+}
+
+// Example
+
 const c: Compound = "KNO3";
 const n: Nutrient = "NO3";
-const f = getFraction(c, n);
+const tankSizeGallons = 26;
+const targetPpmIncrease = 5;
 
-console.log(c + " provides " + f + " of " + n + " by mass.");
+// convert tank size to metric
+const tankSizeLiters = gallonsToLiters(tankSizeGallons);
 
-const mgCompound = compoundMgNeededForPpm(100, 10, "KNO3", "NO3");
+// get the mg of compound needed to increase nutrient ppm by desired amount
+const mgCompoundNeeded = compoundMgNeededForPpm(tankSizeLiters, targetPpmIncrease, c, n);
+const mlDose = mgNutrientPerMl(mgCompoundNeeded, 80) // assuming you add 40g to 500ml
 
-console.log("To increase " + n + " by 10 ppm in a 100 liter tank, you need to add " + mgCompound.toFixed(2) + " mg of " + c + ".");
+console.log('To increase ' + n + ' by ' + targetPpmIncrease + ' ppm in a ' + tankSizeGallons + 'g tank, you need ' + mgCompoundNeeded.toFixed(2) + ' mg of ' + c + '.');
+console.log('To add ' + mgCompoundNeeded.toFixed(2) + ' mg of ' + c + ', you need to dose ' + mlDose.toFixed(2) + ' ml of solution.');
