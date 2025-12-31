@@ -79,25 +79,42 @@ const mgCompoundPerMl = (gramsInSolution: number, volumeMl: number): number => {
   return (gramsInSolution * 1000) / volumeMl; // convert grams to mg
 }
 
+// Example -------------------------------------------------------------
 
-// Example
+// user gives tank size, stock recipes, and target nutrient ppm increase
+// system computes stock nutrient levels per ml
+// system calculates mg of nutrient needed to reach desired ppm increase.
+// system computes dose ml needed to dose desired mg of nutrients.
+
+// user data from initial setup
+const tankSizeGallons = 26;
+const tankSizeLiters = gallonsToLiters(tankSizeGallons);
 const c: Compound = "KNO3";
 const n: Nutrient = "NO3";
-const tankSizeGallons = 26;
-const targetPpmIncrease = 5;
+const targetsPpm: Partial<Record<Nutrient, number>> = { NO3: 5, PO4: 1, K: 1}
+const stockRecipe: StockRecipe = {
+  compound: c,
+  grams: 40,
+  finalVolumeMl: 500,
+};
 
-// convert tank size to metric
-const tankSizeLiters = gallonsToLiters(tankSizeGallons);
+// get nutrient concentration in users stock.
+const stock = makeStock(stockRecipe);
 
-// get the mg of compound needed to increase nutrient ppm by desired amount
-const mgCompoundNeeded = compoundMgNeededForPpm(tankSizeLiters, targetPpmIncrease, c, n);
-const mlDose = doseMlFromMgAndConcentration(mgCompoundNeeded, 80) // assuming you add 40g to 500ml
+// get mg of nutrient needed to increase ppm by desired level
+const mgKNO3Needed = 
+  targetsPpm.NO3 === undefined
+    ? 0 
+    : nutrientMgNeeded(tankSizeLiters, targetsPpm.NO3) / getFraction("KNO3", "NO3");
+const mgKH2PO4Needed =
+  targetsPpm.PO4 === undefined
+    ? 0
+    : nutrientMgNeeded(tankSizeLiters, targetsPpm.PO4) / getFraction("KH2PO4", "PO4");
+const mgK2SO4Needed = 
+  targetsPpm.K === undefined
+    ? 0
+    : nutrientMgNeeded(tankSizeLiters, targetsPpm.K) / getFraction("K2SO4", "K");
 
-const mixture: StockRecipe = {compound: c, grams: 40, finalVolumeMl: 500};
-const testStock: Stock = makeStock(mixture); // Standard mix for KNO3
-
-console.log('To increase ' + n + ' by ' + targetPpmIncrease + ' ppm in a ' + tankSizeGallons + 'g tank, you need ' + mgCompoundNeeded.toFixed(2) + ' mg of ' + c + '.');
-console.log('To add ' + mgCompoundNeeded.toFixed(2) + ' mg of ' + c + ', you need to dose ' + mlDose.toFixed(2) + ' ml of solution.');
-console.log('---Stock solution Example ---');
-console.log(testStock);
-
+console.log("KNO3 mg needed: " + mgKNO3Needed.toFixed(2));
+console.log("KH2PO4 mg needed: " + mgKH2PO4Needed.toFixed(2));
+console.log("K2SO4 mg needed: " + mgK2SO4Needed.toFixed(2));
