@@ -13,29 +13,6 @@ type StockRecipe = {
   finalVolumeMl: number;
 }
 
-type Stock = {
-  recipe: StockRecipe;
-  nutrientMgPerMl: Partial<Record<Nutrient, number>>;
-}
-
-const makeStock = (recipe: StockRecipe): Stock => {
-  if (recipe.grams <=0 ) throw new Error("Grams must be positive");
-  if (recipe.finalVolumeMl <=0 ) throw new Error("Final volume must be positive");
-  if (recipe.compound === undefined) throw new Error("Compound must be defined");
-  const mgCompoundPerMl = (recipe.grams * 1000) / recipe.finalVolumeMl; // convert grams to mg/ml
-
-  const fractions = FRACTION_BY_MASS[recipe.compound];
-  const nutrientMgPerMl: Partial<Record<Nutrient, number>> = {};
-
-  for (const n in fractions) {
-    const f = fractions[n as Nutrient];
-    if (f == null) continue;
-    nutrientMgPerMl[n as Nutrient] = mgCompoundPerMl * f;
-  }
- 
-  return {recipe, nutrientMgPerMl};
-}
-
 // Simple conversion helpers
 const gallonsToLiters = (gallons: number): number => gallons * 3.78541;
 const litersToGallons = (liters: number): number => liters / 3.78541;
@@ -74,7 +51,7 @@ const doseMlFromMgAndConcentration = (mgNeeded: number, mgPerMl: number): number
 
 // to get concentration in mg/ml of a solution given grams of compound dissolved in volume in ml
 const mgCompoundPerMl = (gramsInSolution: number, volumeMl: number): number => {
-  if (volumeMl < 0 ) throw new Error("Volume must be positive");
+  if (volumeMl <= 0 ) throw new Error("Volume must be positive");
   if (gramsInSolution <=0 ) throw new Error("Mass must be positive");
   return (gramsInSolution * 1000) / volumeMl; // convert grams to mg
 }
@@ -99,10 +76,6 @@ const c1: Compound = "KNO3";
 const c2: Compound = "KH2PO4";
 const c3: Compound = "K2SO4";
 
-const n1: Nutrient = "NO3";
-const n2: Nutrient = "PO4";
-const n3: Nutrient = "K";
-
 const targetsPpm: Partial<Record<Nutrient, number>> = { NO3: 5, PO4: 1, K: 20} // this will be a user input
 
 const stockRecipeKNO3: StockRecipe = {
@@ -122,10 +95,6 @@ const stockRecipeK2SO4: StockRecipe = {
   grams: 55,
   finalVolumeMl: 500,
 };
-// get nutrient concentration in users stock.
-const stockKNO3 = makeStock(stockRecipeKNO3);
-const stockKH2PO4 = makeStock(stockRecipeKH2PO4);
-const stockK2SO4 = makeStock(stockRecipeK2SO4);
 
 // get target levels into a more usable form, if user doesnt input, set desired increase to 0.
 const no3Ppm = targetsPpm.NO3 ?? 0;
@@ -133,26 +102,17 @@ const po4Ppm = targetsPpm.PO4 ?? 0;
 const kPpm = targetsPpm.K ?? 0;
 
 // get mg of nutrient needed to increase ppm by desired level
-const mgKNO3Needed = 
-  no3Ppm === 0
-    ? 0 
-    : nutrientMgNeeded(tankSizeLiters, no3Ppm) / getFraction("KNO3", "NO3");
+const mgKNO3Needed = no3Ppm === 0 ? 0 : compoundMgNeededForPpm(tankSizeLiters, no3Ppm, "KNO3", "NO3");
 
 
-const mgKH2PO4Needed =
-  po4Ppm === 0
-    ? 0
-    : nutrientMgNeeded(tankSizeLiters, po4Ppm) / getFraction("KH2PO4", "PO4");
+const mgKH2PO4Needed = po4Ppm === 0 ? 0 : compoundMgNeededForPpm(tankSizeLiters, po4Ppm, "KH2PO4", "PO4");
 
 // calculate K Coming from other compounds
 const mgKAlready = nutrientMgFromCompoundMg("KNO3", "K", mgKNO3Needed) + nutrientMgFromCompoundMg("KH2PO4", "K", mgKH2PO4Needed);
 const mgKTarget = kPpm === 0 ? 0 : nutrientMgNeeded(tankSizeLiters, kPpm);
 const mgKDeficit = Math.max(0, mgKTarget - mgKAlready);
 
-const mgK2SO4Needed = 
-  mgKDeficit === 0
-    ? 0
-    : mgKDeficit / getFraction("K2SO4", "K");
+const mgK2SO4Needed = mgKDeficit === 0 ? 0 : mgKDeficit / getFraction("K2SO4", "K");
 
 console.log("KNO3 mg needed: " + mgKNO3Needed.toFixed(2));
 console.log("KH2PO4 mg needed: " + mgKH2PO4Needed.toFixed(2));
@@ -160,10 +120,14 @@ console.log("K2SO4 mg needed: " + mgK2SO4Needed.toFixed(2));
 
 console.log("Dosing " + mgKNO3Needed.toFixed(2) + " mg of KNO3, and " + mgKH2PO4Needed.toFixed(2) + " mg of KH2PO4 will dose " + mgKAlready.toFixed(2) + " mg of K. Meaning you only need to dose " + mgKDeficit.toFixed(2) + " mg of K more to reach your target of " + mgKTarget.toFixed(2) + " mg of K.");
 
+const KNO3Concentration = mgCompoundPerMl(stockRecipeKNO3.grams, stockRecipeKNO3.finalVolumeMl);
+const KH2PO4Concentration = mgCompoundPerMl(stockRecipeKH2PO4.grams, stockRecipeKH2PO4.finalVolumeMl);
+const K2SO4Concentration = mgCompoundPerMl(stockRecipeK2SO4.grams, stockRecipeK2SO4.finalVolumeMl);
+
 // compute ml dose from stock solutions
-const doseMlKNO3 = doseMlFromMgAndConcentration(mgKNO3Needed, stockKNO3.nutrientMgPerMl.NO3! / getFraction("KNO3", "NO3"));
-const doseMlKH2PO4 = doseMlFromMgAndConcentration(mgKH2PO4Needed, stockKH2PO4.nutrientMgPerMl.PO4! / getFraction("KH2PO4", "PO4"));
-const doseMlK2SO4 = doseMlFromMgAndConcentration(mgK2SO4Needed, stockK2SO4.nutrientMgPerMl.K! / getFraction("K2SO4", "K"));
+const doseMlKNO3 = doseMlFromMgAndConcentration(mgKNO3Needed, KNO3Concentration);
+const doseMlKH2PO4 = doseMlFromMgAndConcentration(mgKH2PO4Needed, KH2PO4Concentration);
+const doseMlK2SO4 = doseMlFromMgAndConcentration(mgK2SO4Needed, K2SO4Concentration);
 console.log("Dose " + doseMlKNO3.toFixed(2) + " ml of KNO3 stock solution.");
 console.log("Dose " + doseMlKH2PO4.toFixed(2) + " ml of KH2PO4 stock solution.");
 console.log("Dose " + doseMlK2SO4.toFixed(2) + " ml of K2SO4 stock solution.");
