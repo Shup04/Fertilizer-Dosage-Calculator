@@ -32,7 +32,7 @@ const makeStock = (recipe: StockRecipe): Stock => {
     if (f == null) continue;
     nutrientMgPerMl[n as Nutrient] = mgCompoundPerMl * f;
   }
-
+ 
   return {recipe, nutrientMgPerMl};
 }
 
@@ -79,6 +79,11 @@ const mgCompoundPerMl = (gramsInSolution: number, volumeMl: number): number => {
   return (gramsInSolution * 1000) / volumeMl; // convert grams to mg
 }
 
+const nutrientMgFromCompoundMg = (c: Compound, n: Nutrient, mgCompound: number): number => {
+  const f = getFraction(c, n);
+  return mgCompound * f;
+}
+
 // Example -------------------------------------------------------------
 
 // user gives tank size, stock recipes, and target nutrient ppm increase
@@ -91,7 +96,7 @@ const tankSizeGallons = 26;
 const tankSizeLiters = gallonsToLiters(tankSizeGallons);
 const c: Compound = "KNO3";
 const n: Nutrient = "NO3";
-const targetsPpm: Partial<Record<Nutrient, number>> = { NO3: 5, PO4: 1, K: 1}
+const targetsPpm: Partial<Record<Nutrient, number>> = { NO3: 2, PO4: 3, K: 10} // this will be a user input
 const stockRecipe: StockRecipe = {
   compound: c,
   grams: 40,
@@ -101,19 +106,32 @@ const stockRecipe: StockRecipe = {
 // get nutrient concentration in users stock.
 const stock = makeStock(stockRecipe);
 
+// get target levels into a more usable form, if user doesnt input, set desired increase to 0.
+const no3Ppm = targetsPpm.NO3 ?? 0;
+const po4Ppm = targetsPpm.PO4 ?? 0;
+const kPpm = targetsPpm.K ?? 0;
+
 // get mg of nutrient needed to increase ppm by desired level
 const mgKNO3Needed = 
-  targetsPpm.NO3 === undefined
+  no3Ppm === 0
     ? 0 
-    : nutrientMgNeeded(tankSizeLiters, targetsPpm.NO3) / getFraction("KNO3", "NO3");
+    : nutrientMgNeeded(tankSizeLiters, no3Ppm) / getFraction("KNO3", "NO3");
+
+
 const mgKH2PO4Needed =
-  targetsPpm.PO4 === undefined
+  po4Ppm === 0
     ? 0
-    : nutrientMgNeeded(tankSizeLiters, targetsPpm.PO4) / getFraction("KH2PO4", "PO4");
+    : nutrientMgNeeded(tankSizeLiters, po4Ppm) / getFraction("KH2PO4", "PO4");
+
+// calculate K Coming from other compounds
+const mgKAlready = nutrientMgFromCompoundMg("KNO3", "K", mgKNO3Needed) + nutrientMgFromCompoundMg("KH2PO4", "K", mgKH2PO4Needed);
+const mgKTarget = kPpm === 0 ? 0 : nutrientMgNeeded(tankSizeLiters, kPpm);
+const mgKDeficit = Math.max(0, mgKTarget - mgKAlready);
+
 const mgK2SO4Needed = 
-  targetsPpm.K === undefined
+  mgKDeficit === 0
     ? 0
-    : nutrientMgNeeded(tankSizeLiters, targetsPpm.K) / getFraction("K2SO4", "K");
+    : mgKDeficit / getFraction("K2SO4", "K");
 
 console.log("KNO3 mg needed: " + mgKNO3Needed.toFixed(2));
 console.log("KH2PO4 mg needed: " + mgKH2PO4Needed.toFixed(2));
