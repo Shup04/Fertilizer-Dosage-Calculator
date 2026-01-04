@@ -1,4 +1,4 @@
-type PpsNutrient = "NO3" | "PO4" | "K" | "Mg" | "Fe" | "Cu" | "Mn" | "Zn";
+type PpsNutrient = "NO3" | "PO4" | "K" | "Mg" | "Fe" | "Cu" | "Mn" | "Zn" | "S";
 type PpmMap = Partial<Record<PpsNutrient, number>>;
 
 type SolutionSpec =
@@ -23,19 +23,27 @@ const mgToPpm = (mg: number, liters: number): number => mg / liters;
 
 const normalizeSolutionSpec = (spec: SolutionSpec): NormalizedSolution => {
   if (spec.kind === "ppm_per_reference_dose") {
-    const factor = 10 / litersToGallons(gallonsToLiters(spec.referenceTankGallons) * (spec.referenceDoseMl / 1000));
+    if (spec.referenceTankGallons <= 0) throw new Error("referenceTankGallons must be positive");
+    if (spec.referenceDoseMl <= 0) throw new Error("referenceDoseMl must be positive");
+
     const ppmPer10g: PpmMap = {};
+    const volumeScale = 10 / spec.referenceTankGallons;
+    const doseScale = 1 / spec.referenceDoseMl;
+
     for (const nutrient in spec.ppmAtReference) {
       const n = nutrient as PpsNutrient;
-      ppmPer10g[n] = (spec.ppmAtReference[n] || 0) * factor;
+      const ppm = spec.ppmAtReference[n];
+      if (ppm === undefined) continue;
+      ppmPer10g[n] = ppm * volumeScale * doseScale;
     }
     return { ppmPer10g };
-  } else if (spec.kind === "manual_ml_per_10g") {
-    // Without ppm data, we can't normalize to ppm per 10g
-    return { ppmPer10g: {} };
-  } else {
-    throw new Error("Unknown SolutionSpec kind");
   }
+
+  if (spec.kind === "manual_ml_per_10g") {
+    return { ppmPer10g: {} };
+  }
+
+  throw new Error("Unknown SolutionSpec kind");
 };
 
 // Target ppm increase levels per day for pps
@@ -87,7 +95,7 @@ const solveMlPerDoseFromAnchor = (input: {
   if (ppmPer10g === undefined || ppmPer10g <=0) {
     throw new Error(`Normalized solution does not provide ppm data for anchor nutrient ${input.anchor}`);
   }
-  const doseMl = (PPS_TARGETS_PER_DAY.medium[input.anchor]! / ppmPer10g);
+  const doseMl = input.targetPpmPerDose * (input.tankGallons / 10) / ppmPer10g;
   return doseMl;
 };
 
@@ -103,7 +111,7 @@ doseMl: number;
     const n = nutrient as PpsNutrient;
     const ppmPer10g = input.normalized.ppmPer10g[n];
     if (ppmPer10g !== undefined) {
-      ppmMap[n] = ppmPer10g * (input.doseMl / 1);
+      ppmMap[n] = ppmPer10g * input.doseMl * (10 / input.tankGallons);
     }
   }
   return ppmMap;
@@ -129,16 +137,21 @@ const buildPpsPlan = (input: {
   const normalizedMacro = normalizeSolutionSpec(input.macroSolution);
   const normalizedMicro = normalizeSolutionSpec(input.microSolution);
 
+  const scale = 7 / input.dosesPerWeek;
+
+  const no3TargetPerDose = (PPS_TARGETS_PER_DAY[input.ppsLevel].NO3 ?? 0) * scale;
+  const feTargetPerDose  = (PPS_TARGETS_PER_DAY[input.ppsLevel].Fe  ?? 0) * scale;
+
   const macroDoseMl = solveMlPerDoseFromAnchor({
     tankGallons: input.tankGallons,
     normalized: normalizedMacro,
-    targetPpmPerDose: PPS_TARGETS_PER_DAY[input.ppsLevel]["NO3"]!,
+    targetPpmPerDose: no3TargetPerDose,
     anchor: "NO3",
   });
   const microDoseMl = solveMlPerDoseFromAnchor({
     tankGallons: input.tankGallons,
     normalized: normalizedMicro,
-    targetPpmPerDose: PPS_TARGETS_PER_DAY[input.ppsLevel]["Fe"]!,
+    targetPpmPerDose: feTargetPerDose,
     anchor: "Fe",
   });
   const impliedMacroPpm = impliedPpmFromDose({
@@ -162,3 +175,49 @@ const buildPpsPlan = (input: {
 }
 
 
+// -------------------- Quick Test Case --------------------
+
+const tankGallons = 10;
+
+// Example “label” data:
+// “When dosing 2 mL into 10 gallons, you add these ppm”
+const macroSolution: SolutionSpec = {
+  kind: "ppm_per_reference_dose",
+  referenceTankGallons: 10,
+  referenceDoseMl: 2,
+  ppmAtReference: {
+    NO3: 2.242293966,
+    PO4: 0.249380468,
+    K: 2.657750354,
+    Mg: 0.218823675,
+    S: 0.767019389,
+  },
+};
+
+const microSolution: SolutionSpec = {
+  kind: "ppm_per_reference_dose",
+  referenceTankGallons: 10,
+  referenceDoseMl: 2,
+  ppmAtReference: {
+    Fe: 0.076186628,
+    Mn: 0.021767608,
+    Zn: 0.004353522,
+    Cu: 0.001088380,
+  },
+};
+
+const plan = buildPpsPlan({
+  tankGallons,
+  ppsLevel: "medium",
+  macroSolution,
+  microSolution,
+  dosesPerWeek: 7,
+});
+
+console.log("---- PPS Test Plan ----");
+console.log("Tank (g):", tankGallons);
+console.log("Macro mL per dose:", plan.macroMlPerDose.toFixed(3));
+console.log("Micro mL per dose:", plan.microMlPerDose.toFixed(3));
+console.log("Days of week:", plan.daysOfWeek);
+console.log("Implied Macro ppm per dose:", plan.impliedMacroPpm);
+console.log("Implied Micro ppm per dose:", plan.impliedMicroPpm);
