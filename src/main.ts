@@ -1,3 +1,11 @@
+type TargetsPpm = Partial<Record<Nutrient, number>>; // per dose
+type PresetOutput = {
+  targetsPerDosePpm: TargetsPpm;
+  dosesPerWeek: number;
+  daysOfWeek: number[]; // 0..6 or similar
+  note?: string;
+};
+
 type Nutrient = "NO3" | "PO4" | "K" | "Fe" ;
 type Compound = "KNO3" | "KH2PO4" | "K2SO4";
 
