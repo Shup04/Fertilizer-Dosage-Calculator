@@ -52,3 +52,56 @@ const normalizeSolutionSpec = (spec: SolutionSpec): NormalizedSolution => {
   throw new Error("Unknown SolutionSpec kind");
 };
 
+const solveDoseMlForTargetPpm = (input: {
+  tankGallons: number;
+  normalized: NormalizedSolution;
+  targetPpm: number;
+  nutrient: PpsNutrient;
+}): number => {
+  if (input.tankGallons <= 0) throw new Error("tankGallons must be positive");
+  if (input.targetPpm < 0) throw new Error("targetPpm must be >= 0");
+
+  const ppmPer10g = input.normalized.ppmPer10g[input.nutrient];
+  if (ppmPer10g === undefined || ppmPer10g <= 0) {
+    throw new Error(`No ppm data for nutrient ${input.nutrient}`);
+  }
+
+  // targetPpm = ppmPer10g * doseMl * (10 / tankGallons)
+  // doseMl = targetPpm * (tankGallons / 10) / ppmPer10g
+  return input.targetPpm * (input.tankGallons / 10) / ppmPer10g;
+};
+
+const DEFAULT_EI_SCHEDULE: EiSchedule = {
+  macroDays: [1, 3, 5],
+  microDays: [2, 4, 6],
+  waterChangeDay: 0,
+}
+
+type DoseEvent = {dayOfWeek: number; kind: "macro" | "micro"; ml: number};
+
+const buildEiEvents = (input: {
+  schedule: EiSchedule;
+  macroMlPerDose: number;
+  microMlPerDose: number;
+}): DoseEvent[] => {
+  const events: DoseEvent[] = [];
+
+  for (const d of input.schedule.macroDays) events.push({ dayOfWeek: d, kind: "macro", ml: input.macroMlPerDose });
+  for (const d of input.schedule.microDays) events.push({ dayOfWeek: d, kind: "micro", ml: input.microMlPerDose });
+
+  // sort by day for nicer output
+  events.sort((a, b) => a.dayOfWeek - b.dayOfWeek);
+  return events;
+};
+
+type EiLevel = "standard";
+
+// placeholder numbers for now
+const EI_PER_DOSE_TARGETS: Record<EiLevel, { macro: PpmMap; micro: PpmMap }> = {
+  standard: {
+    macro: { NO3: 5, PO4: 0.5, K: 5 }, // example only
+    micro: { Fe: 0.1 },                // example only
+  },
+};
+
+
