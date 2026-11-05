@@ -13,7 +13,7 @@ type SolutionSpec =
       mlPer10Gallons: number; 
     };
 
-type NormalizedSolution = { ppmPer10g: PpmMap; }; // normalized to per 10 gallons
+type NormalizedSolution = { ppmPer10g: PpmMap; }; // ppm from 1 mL in 10 gallons
 
 type EiSchedule = {
   macroDays: number[]; // [1,3,5]
@@ -33,7 +33,8 @@ const normalizeSolutionSpec = (spec: SolutionSpec): NormalizedSolution => {
     if (spec.referenceDoseMl <= 0) throw new Error("referenceDoseMl must be positive");
 
     const ppmPer10g: PpmMap = {};
-    const volumeScale = 10 / spec.referenceTankGallons;
+    // The same dose is more concentrated in 10 gallons than in a larger reference tank.
+    const volumeScale = spec.referenceTankGallons / 10;
     const doseScale = 1 / spec.referenceDoseMl;
 
     for (const nutrient in spec.ppmAtReference) {
@@ -276,3 +277,6 @@ const normalizedMicro = normalizeSolutionSpec(microSolution);
 console.log("--- Sanity check: 2 mL into 10g ---");
 console.log("Macro ppm from 2 mL:", ppmFromDose({ tankGallons: 10, normalized: normalizedMacro, doseMl: 2 }));
 console.log("Micro ppm from 2 mL:", ppmFromDose({ tankGallons: 10, normalized: normalizedMicro, doseMl: 2 }));
+
+// Expose the calculation helpers for regression tests; the example remains executable.
+export = { normalizeSolutionSpec, ppmFromDose, solveDoseMlForTargetPpm, buildEiPlan };

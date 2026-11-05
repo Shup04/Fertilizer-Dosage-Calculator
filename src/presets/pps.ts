@@ -13,7 +13,7 @@ type SolutionSpec =
       mlPer10Gallons: number; 
     };
 
-type NormalizedSolution = { ppmPer10g: PpmMap; }; // normalized to per 10 gallons
+type NormalizedSolution = { ppmPer10g: PpmMap; }; // ppm from 1 mL in 10 gallons
 
 //Helpers
 const gallonsToLiters = (gallons: number): number => gallons * 3.78541;
@@ -27,7 +27,8 @@ const normalizeSolutionSpec = (spec: SolutionSpec): NormalizedSolution => {
     if (spec.referenceDoseMl <= 0) throw new Error("referenceDoseMl must be positive");
 
     const ppmPer10g: PpmMap = {};
-    const volumeScale = 10 / spec.referenceTankGallons;
+    // The same dose is more concentrated in 10 gallons than in a larger reference tank.
+    const volumeScale = spec.referenceTankGallons / 10;
     const doseScale = 1 / spec.referenceDoseMl;
 
     for (const nutrient in spec.ppmAtReference) {
@@ -244,3 +245,6 @@ console.log("Implied Micro ppm per dose:", plan.impliedMicroPpm);
 
 const expectedDose = ppmFromDose({tankGallons: tankGallons, normalized: normalizeSolutionSpec(macroSolution), doseMl: 2});
 console.log("Recomputed Macro ppm from dose:", expectedDose);
+
+// Expose the calculation helpers for regression tests; the example remains executable.
+export = { normalizeSolutionSpec, ppmFromDose, solveMlPerDoseFromAnchor, buildPpsPlan };

@@ -4,7 +4,7 @@ A TypeScript experiment in turning aquarium fertilizer information into explicit
 
 The central idea is to keep **nutrient targets, fertilizer composition, tank volume and schedule** separate. A nutrient target is not a bottle dose. A compound may supply more than one nutrient, and a premixed bottle fixes the ratio between them. The calculator makes those relationships visible instead of treating every nutrient as an independent addition.
 
-This repository currently contains three executable calculation examples, not a finished app or published library. The preset label normalization has a known volume-scaling error described below; its generalized dose output should not be used until that is corrected and checked.
+This repository currently contains three executable calculation examples, not a finished app or published library. PPS and EI label normalization is covered by regression tests; the preset targets and remaining calculation paths still have the validation limits described below.
 
 ## How the idea developed
 
@@ -43,7 +43,7 @@ The embedded example uses a 26-gallon tank and three separately prepared stocks.
 
 ### Commercial bottles: solve an anchor, expose the other nutrients
 
-PPS and EI accept a `ppm_per_reference_dose` description: a reference tank size, a reference millilitre dose and the resulting nutrient increases. They try to normalize that label into nutrient ppm from **1 mL in 10 gallons**.
+PPS and EI accept a `ppm_per_reference_dose` description: a reference tank size, a reference millilitre dose and the resulting nutrient increases. They normalize that label into nutrient ppm from **1 mL in 10 gallons**.
 
 Both planners use nitrate (`NO3`) as the macro anchor and iron (`Fe`) as the micro anchor. Once the anchor determines the bottle dose, every other nutrient follows the bottle's fixed composition. Returning the *implied* phosphate, potassium and trace additions is therefore part of the design: these planners do not independently solve every target in their tables.
 
@@ -57,24 +57,26 @@ The `manual_ml_per_10g` input represents a bottle whose usable information is a 
 
 PPS declares the same input type, but its plan builder still attempts anchor solving against an empty nutrient map and throws. That path is unfinished.
 
-## Known numerical issue and current limits
+## Label normalization and current limits
 
-Both `normalizeSolutionSpec` implementations currently multiply label ppm by `10 / referenceTankGallons`. For the intended “1 mL in 10 gallons” basis, the volume factor must instead be `referenceTankGallons / 10`:
+Both `normalizeSolutionSpec` implementations use `referenceTankGallons / 10` to convert a label to the “1 mL in 10 gallons” basis:
 
 ```text
 normalized ppm = label ppm × (reference gallons / 10) / reference dose mL
 ```
 
-A synthetic label saying “2 mL in 20 gallons adds 4 ppm” should reproduce 4 ppm when reapplied at that dose and tank size. The current functions produce 1 ppm and solve for 8 mL to reach 4 ppm. The embedded ten-gallon examples cannot reveal this error because the volume factor is one in either direction. This example establishes an arithmetic defect; it is not a fertilizer prescription.
+A synthetic label saying “2 mL in 20 gallons adds 4 ppm” normalizes to 4 ppm per 1 mL in 10 gallons. Applying the original 2 mL dose in 20 gallons reproduces 4 ppm, and solving for 4 ppm returns 2 mL. In a 40-gallon tank, the same 2 mL adds 2 ppm and reaching 4 ppm requires 4 mL. These synthetic values check arithmetic; they are not fertilizer prescriptions.
+
+The regression suite asserts independent normalized values, label round-trips, macro/micro anchor doses and tank-size scaling for both presets. It covers 5-, 10-, 20- and 37.5-gallon label references, as well as both planners with a 20-gallon label applied to a 40-gallon tank. The original inverse-volume formula fails these non-ten-gallon cases.
 
 Other boundaries are explicit in the source:
 
-- The examples execute at file scope and print results. The functions are not exported as a public API, and there is no CLI input parser, UI or persistence layer.
-- The printed “test” and “sanity check” sections contain no assertions. `npm test` is the default failing placeholder, not a test suite.
+- The examples execute at file scope and print results, including when imported. PPS and EI export calculation helpers for regression testing, but there is no stable public API, CLI input parser, UI or persistence layer.
+- The printed “test” and “sanity check” sections are still illustrative. `npm test` runs asserted PPS/EI label-normalization tests; it does not validate the advanced stock calculation or every planner input.
 - Preset target values are project constants, not established universal requirements. EI's final example matches its target table to its example bottle data.
 - These are calculations of additions. They do not measure starting concentrations, plant consumption, substrate effects or changes between doses.
 
-## Running the existing examples
+## Running checks and examples
 
 Use Node.js compatible with the lockfile's tools; the recorded `tsx` and esbuild packages require Node 18 or newer. The lockfile records TypeScript 5.9.3 and `tsx` 4.21.0.
 
@@ -82,6 +84,13 @@ From the repository root, a fresh dependency setup is:
 
 ```sh
 npm ci
+```
+
+Run the regression suite and TypeScript checks:
+
+```sh
+npm test
+npm run typecheck
 ```
 
 Then run whichever example you want to inspect:
@@ -98,7 +107,7 @@ These commands use the hardcoded inputs near the bottom of each source file and 
 
 The original calculation experiment can be complete without becoming a full aquarium application. A bounded finish would be:
 
-- [ ] Correct normalization in both preset paths and assert independent label round-trips for ten-gallon and non-ten-gallon references, including the synthetic 2 mL / 20 gallon / 4 ppm case and scaling to a different tank size.
+- [x] Correct normalization in both preset paths and assert independent label round-trips for ten-gallon and non-ten-gallon references, including the synthetic 2 mL / 20 gallon / 4 ppm case and scaling to a different tank size.
 - [ ] Verify the advanced stock calculation against hand-calculated compound masses and concentrations, including potassium already supplied by `KNO3` and `KH2PO4` and the case where no extra `K2SO4` is needed.
 - [ ] Finish the declared PPS manual-dose path or explicitly remove it from the supported inputs. Verify PPS weekly scaling and EI macro/micro scheduling, with defined behavior for invalid dose counts and schedule values.
 - [ ] Identify the source and intended scope of each preset target and label example; distinguish supplier-specific settings from general presets, and demonstrate which nutrient is the anchor and what the other implied additions become.
