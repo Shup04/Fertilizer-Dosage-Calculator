@@ -41,9 +41,8 @@ export const normalizeSolutionSpec = (spec: SolutionSpec): NormalizedSolution =>
     const volumeScale = spec.referenceTankGallons / 10;
     const doseScale = 1 / spec.referenceDoseMl;
 
-    for (const nutrient in spec.ppmAtReference) {
+    for (const [nutrient, ppm] of Object.entries(spec.ppmAtReference)) {
       const n = nutrient as PpsNutrient;
-      const ppm = spec.ppmAtReference[n];
       if (ppm === undefined) continue;
       ppmPer10g[n] = nonnegative(ppm * volumeScale * doseScale, "normalized ppm");
     }
@@ -70,10 +69,8 @@ export const ppmFromDose = (input: {
   const out: PpmMap = {};
   const tankScale = 10 / input.tankGallons;
 
-  for (const k in input.normalized.ppmPer10g) {
+  for (const [k, ppmPer10g] of Object.entries(input.normalized.ppmPer10g)) {
     const n = k as PpsNutrient;
-    validatePpm(input.normalized.ppmPer10g);
-  const ppmPer10g = input.normalized.ppmPer10g[n];
     if (ppmPer10g === undefined) continue;
     out[n] = nonnegative(ppmPer10g * input.doseMl * tankScale, "implied ppm");
   }
@@ -92,7 +89,7 @@ export const solveDoseMlForTargetPpm = (input: {
 
   validatePpm(input.normalized.ppmPer10g);
   const ppmPer10g = input.normalized.ppmPer10g[input.nutrient];
-  if (ppmPer10g === undefined || ppmPer10g <= 0) {
+  if (!Object.prototype.hasOwnProperty.call(input.normalized.ppmPer10g, input.nutrient) || ppmPer10g === undefined || ppmPer10g <= 0) {
     throw new Error(`No ppm data for nutrient ${input.nutrient}`);
   }
 

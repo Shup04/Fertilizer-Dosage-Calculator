@@ -79,3 +79,21 @@ it('prototype property names are not supported preset levels with manual bottles
   assert.throws(()=>api.buildEiPlan({...input,level}),/Unknown/);
  }
 });
+
+it('only supplied own nutrient properties are calculated and solved',()=>{
+ const map=Object.assign(Object.create({madeUp:2, NO3:4}), {K:1});
+ assert.deepEqual(api.normalizeSolutionSpec(label(map)).ppmPer10g,{K:1});
+ assert.deepEqual(api.ppmFromDose({tankGallons:10,normalized:{ppmPer10g:map},doseMl:1}),{K:1});
+ assert.throws(()=>api.solveDoseMlForTargetPpm({tankGallons:10,normalized:{ppmPer10g:map},targetPpm:4,nutrient:'NO3'}),/No ppm data/);
+ const own=Object.assign(Object.create(null),{NO3:4});
+ close(api.solveDoseMlForTargetPpm({tankGallons:10,normalized:{ppmPer10g:own},targetPpm:4,nutrient:'NO3'}),1);
+});
+it('exported stock helpers reject overflow and inherited compound/fraction names',()=>{
+ const stock=require('../src/presets/advanced.ts');
+ assert.throws(()=>stock.nutrientMgNeeded(1e308,1e308),/finite/);
+ assert.throws(()=>stock.compoundMgNeededForPpm(1.7e308,1,'KNO3','NO3'),/finite/);
+ assert.throws(()=>stock.doseMlFromMgAndConcentration(1e308,1e-308),/finite/);
+ assert.throws(()=>stock.mgCompoundPerMl(1e308,1),/finite/);
+ assert.throws(()=>stock.getFraction('constructor','name'),/does not provide/);
+ assert.throws(()=>stock.getFraction('KNO3','constructor'),/does not provide/);
+});

@@ -45,7 +45,7 @@ These numbers are synthetic usage examples, not prescriptions.
 | `normalizeSolutionSpec` | A composition-bearing reference label. | ppm supplied by 1 mL in 10 US gallons. Manual-only input throws because composition is unknown. |
 | `ppmFromDose`, `solveDoseMlForTargetPpm`, `solveMlPerDoseFromAnchor` | Positive tank size, normalized composition, nonnegative dose or target and an anchor nutrient for solving. | Implied ppm or solved mL. An absent/zero-strength anchor throws. |
 
-All numeric inputs must be finite. Tank/stock/reference volumes, stock mass and manual bottle doses must be positive. Nutrient concentrations, requested increases and calculated zero doses may be zero. Invalid counts, unsupported levels, invalid days, negative nutrients and nonfinite results throw errors. TypeScript exports include solution, plan, schedule and stock types.
+All numeric inputs must be finite. Tank/stock/reference volumes, stock mass and manual bottle doses must be positive. Nutrient concentrations, requested increases and calculated zero doses may be zero. Invalid counts, unsupported levels, invalid days, negative nutrients and nonfinite results throw errors, including results from the directly exported stock helpers. TypeScript exports include solution, plan, schedule and stock types.
 
 Composition-bearing labels use:
 
@@ -56,7 +56,7 @@ normalized ppm = label ppm × (reference gallons / 10) / reference dose mL
 
 A synthetic label of 2 mL in 20 gallons adding 4 ppm normalizes to 4 ppm per 1 mL in 10 gallons. Applying 2 mL in 20 gallons reproduces 4 ppm; in 40 gallons it supplies 2 ppm.
 
-Supported label nutrients are NO3, PO4, K, Mg, Fe, Cu, Mn, Zn and S. Omitted nutrients remain omitted. Both planners solve NO3 as the macro anchor and Fe as the micro anchor; other nutrients follow the bottle ratio rather than independently meeting every target.
+Supported label nutrients are NO3, PO4, K, Mg, Fe, Cu, Mn, Zn and S. Omitted nutrients remain omitted. Only own enumerable properties in nutrient maps count as supplied values; inherited properties are ignored and cannot supply an anchor. Both planners solve NO3 as the macro anchor and Fe as the micro anchor; other nutrients follow the bottle ratio rather than independently meeting every target.
 
 Manual solutions use `{ kind: 'manual_ml_per_10g', mlPer10Gallons }`. PPS and EI scale this **per-event** volume by tank size only. They do not multiply a manual dose by `7 / dosesPerWeek`, infer a composition or preserve a manual weekly total when frequency changes. Macro and micro modes may be mixed.
 
@@ -68,4 +68,4 @@ The stock solver uses ppm = mg/L and US gallons × 3.78541 = liters. Rounded mas
 
 ## Verification
 
-52 synthetic tests cover the 28 original label-normalization regressions plus silent imports, independently calculated compound masses and K overlap, zero extra K2SO4, stock/tank scaling, PPS weekly totals at all seven frequencies, mixed manual/known composition, EI ordering, schedule ownership and invalid numeric/schedule inputs. Typecheck, declaration build and all three separate examples were run locally. These checks validate arithmetic and contracts, not the biological suitability of targets or manufacturer label claims.
+54 synthetic tests cover the 28 original label-normalization regressions plus silent imports, independently calculated compound masses and K overlap, zero extra K2SO4, stock/tank scaling, PPS weekly totals at all seven frequencies, mixed manual/known composition, EI ordering, schedule ownership and invalid numeric/schedule inputs. Typecheck, declaration build and all three separate examples were run locally. These checks validate arithmetic and contracts, not the biological suitability of targets or manufacturer label claims.
