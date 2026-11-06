@@ -48,6 +48,7 @@ export const buildPpsPlan = (input: {
 }): PpsPlan => {
   positive(input.tankGallons, "tankGallons");
   if (!Number.isInteger(input.dosesPerWeek) || input.dosesPerWeek < 1 || input.dosesPerWeek > 7) throw new Error("dosesPerWeek must be an integer 1..7");
+  if (!Object.prototype.hasOwnProperty.call(PPS_TARGETS_PER_DAY, input.ppsLevel)) throw new Error("Unknown preset level");
   const targets = PPS_TARGETS_PER_DAY[input.ppsLevel];
   if (!targets) throw new Error("Unknown PPS level");
   const dose = (spec: SolutionSpec, anchor: PpsNutrient) => {
