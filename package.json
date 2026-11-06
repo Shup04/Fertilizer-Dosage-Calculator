@@ -1,10 +1,11 @@
 {
   "name": "fertcalc",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "node --require tsx/cjs --test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --outDir dist --rootDir src --project tsconfig.build.json"
   },
   "keywords": [],
   "author": "",
@@ -13,5 +14,6 @@
   "devDependencies": {
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
-  }
+  },
+  "types": "dist/index.d.ts"
 }
