@@ -29,7 +29,8 @@ export const ppmToMg = (ppm: number, liters: number): number => nonnegative(nonn
 export const mgToPpm = (mg: number, liters: number): number => nonnegative(nonnegative(mg, "mg") / positive(liters, "liters"), "ppm");
 
 export const getFraction = (c: Compound, n: Nutrient): number => {
-  const f = FRACTION_BY_MASS[c][n];
+  const fractions = Object.prototype.hasOwnProperty.call(FRACTION_BY_MASS, c) ? FRACTION_BY_MASS[c] : undefined;
+  const f = fractions && Object.prototype.hasOwnProperty.call(fractions, n) ? fractions[n] : undefined;
   if (f === undefined) {
     throw new Error(c + " does not provide " + n);
   }
@@ -39,7 +40,7 @@ export const getFraction = (c: Compound, n: Nutrient): number => {
 export const nutrientMgNeeded = (tankLiters: number, targetPpmIncrease: number): number => {
   positive(tankLiters, "tankLiters");
   positive(targetPpmIncrease, "targetPpmIncrease");
-  return tankLiters * targetPpmIncrease;
+  return positive(tankLiters * targetPpmIncrease, "nutrientMg");
 }
 
 // mg of compound needed to increase nutrient by target ppm in tank of given size
@@ -48,21 +49,21 @@ export const compoundMgNeededForPpm = (tankLiters: number, targetPpmIncrease: nu
   positive(targetPpmIncrease, "targetPpmIncrease");
   const mgNutrient = nutrientMgNeeded(tankLiters, targetPpmIncrease);
   const f = getFraction(c, n);
-  return mgNutrient / f; // mg compound needed
+  return positive(mgNutrient / f, "compoundMg"); // mg compound needed
 }
 
 // ml of solution needed to provide given mg of compound, given concentration in mg/ml
 export const doseMlFromMgAndConcentration = (mgNeeded: number, mgPerMl: number): number => {
   positive(mgPerMl, "mgPerMl");
   nonnegative(mgNeeded, "mgNeeded");
-  return mgNeeded / mgPerMl;
+  return nonnegative(mgNeeded / mgPerMl, "doseMl");
 }
 
 // to get concentration in mg/ml of a solution given grams of compound dissolved in volume in ml
 export const mgCompoundPerMl = (gramsInSolution: number, volumeMl: number): number => {
   positive(volumeMl, "volumeMl");
   positive(gramsInSolution, "gramsInSolution");
-  return (gramsInSolution * 1000) / volumeMl; // convert grams to mg
+  return positive((gramsInSolution * 1000) / volumeMl, "mgPerMl"); // convert grams to mg
 }
 
 export const nutrientMgFromCompoundMg = (c: Compound, n: Nutrient, mgCompound: number): number => {
