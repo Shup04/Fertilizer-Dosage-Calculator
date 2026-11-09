@@ -75,6 +75,7 @@ export const buildEiPlan = (input: {
     if (days.length < 1 || days.length > 7 || new Set(days).size !== days.length) throw new Error("Each schedule requires 1..7 unique days");
     days.forEach(day);
   }
+  if (!Object.prototype.hasOwnProperty.call(EI_TARGETS_PER_DOSE, input.level)) throw new Error("Unknown preset level");
   const targets = EI_TARGETS_PER_DOSE[input.level];
   if (!targets) throw new Error("Unknown EI level");
 

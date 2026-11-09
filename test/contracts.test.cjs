@@ -71,3 +71,11 @@ it('zero nutrient requests are allowed and overflow is rejected',()=>{
  assert.throws(()=>api.normalizeSolutionSpec({...label({NO3:Number.MAX_VALUE}),referenceTankGallons:Number.MAX_VALUE}));
  assert.throws(()=>api.buildEiPlan({...base,tankGallons:Number.MAX_VALUE,level:'standard',macroSolution:{...manual,mlPer10Gallons:Number.MAX_VALUE}}));
 });
+
+it('prototype property names are not supported preset levels with manual bottles',()=>{
+ for(const level of ['constructor','toString','__proto__']) {
+  const input={...base,macroSolution:manual,microSolution:manual};
+  assert.throws(()=>api.buildPpsPlan({...input,ppsLevel:level,dosesPerWeek:3}),/Unknown/);
+  assert.throws(()=>api.buildEiPlan({...input,level}),/Unknown/);
+ }
+});

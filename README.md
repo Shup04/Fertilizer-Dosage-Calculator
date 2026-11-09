@@ -68,4 +68,4 @@ The stock solver uses ppm = mg/L and US gallons × 3.78541 = liters. Rounded mas
 
 ## Verification
 
-51 synthetic assertions cover the 28 original label-normalization regressions plus silent imports, independently calculated compound masses and K overlap, zero extra K2SO4, stock/tank scaling, PPS weekly totals at all seven frequencies, mixed manual/known composition, EI ordering, schedule ownership and invalid numeric/schedule inputs. Typecheck, declaration build and all three separate examples were run locally. These checks validate arithmetic and contracts, not the biological suitability of targets or manufacturer label claims.
+52 synthetic tests cover the 28 original label-normalization regressions plus silent imports, independently calculated compound masses and K overlap, zero extra K2SO4, stock/tank scaling, PPS weekly totals at all seven frequencies, mixed manual/known composition, EI ordering, schedule ownership and invalid numeric/schedule inputs. Typecheck, declaration build and all three separate examples were run locally. These checks validate arithmetic and contracts, not the biological suitability of targets or manufacturer label claims.
